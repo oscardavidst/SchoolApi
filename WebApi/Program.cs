@@ -4,70 +4,91 @@ using Identity.Models;
 using Identity.Seeds;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi.Models;
+using NLog;
+using NLog.Web;
 using Persistence;
 using Shared;
 using WebApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddApplicationLayer(builder.Configuration);
-builder.Services.AddIdentityInfraestructure(builder.Configuration);
-builder.Services.AddSharedInfraestructure(builder.Configuration);
-builder.Services.AddPersistenceInfraestructure(builder.Configuration);
-builder.Services.AddControllers();
+var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentClassLogger();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-
-//builder.Services.AddSwaggerGen();
-builder.Services.AddSwaggerGen(optionsSwagger =>
+try
 {
-    optionsSwagger.SwaggerDoc("v1", new OpenApiInfo
+    // Add services to the container.
+    builder.Services.AddApplicationLayer(builder.Configuration);
+    builder.Services.AddIdentityInfraestructure(builder.Configuration);
+    builder.Services.AddSharedInfraestructure(builder.Configuration);
+    builder.Services.AddPersistenceInfraestructure(builder.Configuration);
+    builder.Services.AddControllers();
+
+    // NLog
+    builder.Logging.ClearProviders();
+    builder.Host.UseNLog();
+
+    // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+    builder.Services.AddEndpointsApiExplorer();
+
+    // Swagger
+    builder.Services.AddSwaggerGen(optionsSwagger =>
     {
-        Title = "SchoolApi",
-        Description = "ASP.NET Core Web API para prueba técnica",
-        Contact = new OpenApiContact
+        optionsSwagger.SwaggerDoc("v1", new OpenApiInfo
         {
-            Name = "Oscar David Soto Tellez",
-            Url = new Uri("https://www.linkedin.com/in/oscar-david-soto/")
-        }
+            Title = "SchoolApi",
+            Description = "ASP.NET Core Web API para prueba técnica",
+            Contact = new OpenApiContact
+            {
+                Name = "Oscar David Soto Tellez",
+                Url = new Uri("https://www.linkedin.com/in/oscar-david-soto/")
+            }
+        });
+        optionsSwagger.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Description = "Porfavor ingrese el token",
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            BearerFormat = "JWT",
+            Scheme = "bearer"
+        });
+        optionsSwagger.AddSecurityRequirement(new OpenApiSecurityRequirement 
+            {{ new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }}, new string [] {} }});
     });
-    optionsSwagger.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+
+    var app = builder.Build();
+
+    // Identity Auth
+    var services = app.Services.CreateAsyncScope();
+    var userManager = services.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = services.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await DefaultRoles.SeedAsync(userManager, roleManager);
+    await DefaultAdministratorUser.SeedAsync(userManager, roleManager);
+    await DefaultBasicUser.SeedAsync(userManager, roleManager);
+    app.UseAuthentication();
+
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
     {
-        In = ParameterLocation.Header,
-        Description = "Porfavor ingrese el token",
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        BearerFormat = "JWT",
-        Scheme = "bearer"
-    });
-    optionsSwagger.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {{ new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }}, new string [] {} }});
-});
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
 
-var app = builder.Build();
+    app.UseHttpsRedirection();
 
-// Identity
-var services = app.Services.CreateAsyncScope();
-var userManager = services.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-var roleManager = services.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-await DefaultRoles.SeedAsync(userManager, roleManager);
-await DefaultAdministratorUser.SeedAsync(userManager, roleManager);
-await DefaultBasicUser.SeedAsync(userManager, roleManager);
-app.UseAuthentication();
+    app.UseAuthorization();
+    app.UserErrorHandlingMiddleware();
+    app.MapControllers();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.Run();
+
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-app.UserErrorHandlingMiddleware();
-app.MapControllers();
-
-app.Run();
+catch (Exception ex)
+{
+    logger.Error(ex, "Program has stopped because there was an exception");
+    throw;
+}
+finally
+{
+    LogManager.Shutdown();
+}

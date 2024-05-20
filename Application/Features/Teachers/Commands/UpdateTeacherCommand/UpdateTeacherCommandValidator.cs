@@ -11,7 +11,7 @@ namespace Application.Features.Teachers.Commands.UpdateTeacherCommand
 
             RuleFor(t => t.Name)
                 .NotEmpty().WithMessage("La propiedad {PropertyName} no puede estar vacia.")
-                .MaximumLength(50).WithMessage("La propiedad {PropertyName} no puede exceder {MaxLength} caracteres.");
+                .MaximumLength(50).WithMessage("La propiedad {PropertyName} ({PropertyValue}) no puede exceder {MaxLength} caracteres.");
         }
     }
 }
