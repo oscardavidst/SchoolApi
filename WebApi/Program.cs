@@ -16,6 +16,18 @@ var logger = LogManager.Setup().LoadConfigurationFromAppSettings().GetCurrentCla
 
 try
 {
+    var MyAllowSpecificOrigins = "MyCors";
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(name: MyAllowSpecificOrigins,
+            policy =>
+            {
+                //policy.WithOrigins("*");
+                policy.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
+                .AllowAnyHeader().AllowAnyMethod();
+            });
+    });
+
     // Add services to the container.
     builder.Services.AddApplicationLayer(builder.Configuration);
     builder.Services.AddIdentityInfraestructure(builder.Configuration);
@@ -74,6 +86,7 @@ try
         app.UseSwaggerUI();
     }
 
+    app.UseCors(MyAllowSpecificOrigins);
     app.UseHttpsRedirection();
 
     app.UseAuthorization();

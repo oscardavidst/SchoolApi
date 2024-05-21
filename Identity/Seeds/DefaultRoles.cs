@@ -8,9 +8,14 @@ namespace Identity.Seeds
     {
         public static async Task SeedAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
-            // Seed o llenado de roles
-            await roleManager.CreateAsync(new IdentityRole(Roles.Administrator.ToString()));
-            await roleManager.CreateAsync(new IdentityRole(Roles.Basic.ToString()));
+            // Llenado de roles
+            var roleAdministrator = await roleManager.FindByNameAsync(Roles.Administrator.ToString());
+            if (roleAdministrator == null)
+                await roleManager.CreateAsync(new IdentityRole(Roles.Administrator.ToString()));
+
+            var roleBasic = await roleManager.FindByNameAsync(Roles.Basic.ToString());
+            if (roleBasic == null)
+                await roleManager.CreateAsync(new IdentityRole(Roles.Basic.ToString()));
         }
     }
 }

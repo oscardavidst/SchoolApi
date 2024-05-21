@@ -25,6 +25,7 @@ namespace Application.Features.Authenticate.Commands.RegisterCommand
 
             RuleFor(p => p.Password)
                 .NotEmpty().WithMessage("La propiedad {PropertyName} no puede estar vacia.")
+                .MinimumLength(5).WithMessage("La propiedad {PropertyName} no puede se menor a {MinLength} caracteres.")
                 .MaximumLength(20).WithMessage("La propiedad {PropertyName} no puede exceder {MaxLength} caracteres.");
 
             RuleFor(p => p.ConfirmPassword)
