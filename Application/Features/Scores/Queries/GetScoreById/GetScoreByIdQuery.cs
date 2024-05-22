@@ -36,10 +36,6 @@ namespace Application.Features.Scores.Queries.GetScoreById
                 else
                 {
                     var dto = _mapper.Map<ScoreDto>(record);
-                    var student = await _repositoryStudentsAsync.GetByIdAsync(dto.IdStudent, cancellationToken);
-                    var teacher = await _repositoryTeachersAsync.GetByIdAsync(dto.IdTeacher, cancellationToken);
-                    dto.StudentName = student.Name;
-                    dto.TeacherName = teacher.Name;
                     return new Response<ScoreDto>(dto);
                 }
             }
