@@ -34,10 +34,13 @@ namespace Application.Features.Scores.Queries.GetAllScores
             {
                 var records = await _repositoryAsync.ListAsync(new ScoresSpecification(request.Name, request.Value, request.IdStudent, request.IdTeacher));
                 var recordsDto = _mapper.Map<List<ScoreDto>>(records);
-                recordsDto.ForEach(async s => {
-                    s.StudentName = (await _repositoryStudentsAsync.GetByIdAsync(s.IdStudent, cancellationToken)).Name;
-                    s.TeacherName = (await _repositoryTeachersAsync.GetByIdAsync(s.IdTeacher, cancellationToken)).Name;
-                });
+                foreach(var record in recordsDto)
+                {
+                    var student = await _repositoryStudentsAsync.GetByIdAsync(record.IdStudent, cancellationToken);
+                    var teacher = await _repositoryTeachersAsync.GetByIdAsync(record.IdTeacher, cancellationToken);
+                    record.StudentName = student.Name;
+                    record.TeacherName = teacher.Name;
+                }
                 return new Response<List<ScoreDto>>(recordsDto);
             }
         }
